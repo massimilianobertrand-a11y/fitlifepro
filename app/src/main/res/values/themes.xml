@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.FitLifePro" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.FitLifePro.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#5B6AF5</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.FitLifePro</item>
+    </style>
+</resources>

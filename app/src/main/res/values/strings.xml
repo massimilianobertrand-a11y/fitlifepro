@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FitLife Pro</string>
+    <string name="channel_workout">Allenamento</string>
+    <string name="channel_nutrition">Nutrizione</string>
+    <string name="channel_supplements">Integratori</string>
+    <string name="channel_hydration">Idratazione</string>
+    <string name="health_connect_rationale">FitLife Pro usa Health Connect per leggere frequenza cardiaca, passi e dati di attività dal tuo Redmi Watch 5 Active tramite Mi Fitness.</string>
+</resources>
