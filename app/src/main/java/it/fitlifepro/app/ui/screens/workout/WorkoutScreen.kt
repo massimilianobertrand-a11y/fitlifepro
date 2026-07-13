@@ -112,22 +112,51 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
 
             // ── ACTIVE / REST ───────────────────────────────────────────
             if (state.phase == WorkoutPhase.ACTIVE || state.phase == WorkoutPhase.REST) {
-                val ex = state.exercises.getOrNull(state.currentExerciseIndex)
+                val ex = state.currentExercise
+                var showExercisePicker by remember { mutableStateOf(false) }
                 item {
                     SectionCard {
                         Row(
                             Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 "⏱ ${state.elapsedSeconds / 60}m ${state.elapsedSeconds % 60}s",
                                 color = Orange500,
                                 style = MaterialTheme.typography.labelLarge
                             )
-                            Text(
-                                "Es. ${state.currentExerciseIndex + 1}/${state.exercises.size}",
-                                color = MaterialTheme.colorScheme.outline,
-                                style = MaterialTheme.typography.labelLarge
+                            // Bottone cambia esercizio
+                            OutlinedButton(
+                                onClick = { showExercisePicker = true },
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(30.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.SwapVert,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    "${state.completedCount}/${state.exercises.size}",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+
+                        // Exercise picker sheet
+                        if (showExercisePicker) {
+                            ExercisePickerSheet(
+                                remainingExercises = state.remainingExercises,
+                                currentExerciseId = state.currentExerciseId,
+                                completedExerciseIds = state.completedExerciseIds,
+                                allExercises = state.exercises,
+                                onPick = { picked ->
+                                    vm.jumpToExercise(picked)
+                                    showExercisePicker = false
+                                },
+                                onDismiss = { showExercisePicker = false }
                             )
                         }
                         Spacer(Modifier.height(8.dp))

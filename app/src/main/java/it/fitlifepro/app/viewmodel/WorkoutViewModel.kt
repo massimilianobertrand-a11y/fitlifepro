@@ -18,14 +18,19 @@ data class WorkoutUiState(
     val trainingDays: List<TrainingDay> = emptyList(),
     val selectedDay: TrainingDay? = null,
     val exercises: List<Exercise> = emptyList(),
-    val currentExerciseIndex: Int = 0,
+    val currentExerciseId: Long? = null,
     val currentSet: Int = 1,
+    val completedExerciseIds: Set<Long> = emptySet(),
     val phase: WorkoutPhase = WorkoutPhase.IDLE,
     val restSecondsLeft: Int = 0,
     val sessionId: Long? = null,
     val performedSets: List<PerformedSet> = emptyList(),
     val elapsedSeconds: Int = 0
-)
+) {
+    val currentExercise: Exercise? get() = exercises.firstOrNull { it.id == currentExerciseId }
+    val remainingExercises: List<Exercise> get() = exercises.filter { it.id !in completedExerciseIds }
+    val completedCount: Int get() = completedExerciseIds.size
+}
 
 @HiltViewModel
 class WorkoutViewModel @Inject constructor(
@@ -50,7 +55,13 @@ class WorkoutViewModel @Inject constructor(
 
     fun selectDay(day: TrainingDay) = viewModelScope.launch {
         val exercises = repo.getExercisesSync(day.id)
-        _state.update { it.copy(selectedDay = day, exercises = exercises, currentExerciseIndex = 0, currentSet = 1) }
+        _state.update { it.copy(
+            selectedDay = day,
+            exercises = exercises,
+            currentExerciseId = exercises.firstOrNull()?.id,
+            currentSet = 1,
+            completedExerciseIds = emptySet()
+        )}
     }
 
     fun startSession() = viewModelScope.launch {
@@ -60,9 +71,20 @@ class WorkoutViewModel @Inject constructor(
         startElapsedTimer()
     }
 
+    /** Salta a un esercizio specifico (macchinario libero) */
+    fun jumpToExercise(exercise: Exercise) {
+        restJob?.cancel()
+        _state.update { it.copy(
+            currentExerciseId = exercise.id,
+            currentSet = 1,
+            phase = WorkoutPhase.ACTIVE,
+            restSecondsLeft = 0
+        )}
+    }
+
     fun logSet(weightKg: Float, repsActual: Int) = viewModelScope.launch {
         val st = _state.value
-        val ex = st.exercises.getOrNull(st.currentExerciseIndex) ?: return@launch
+        val ex = st.currentExercise ?: return@launch
         val sid = st.sessionId ?: return@launch
         repo.logSet(PerformedSet(
             sessionId = sid, exerciseName = ex.name,
@@ -70,16 +92,23 @@ class WorkoutViewModel @Inject constructor(
             weightActual = weightKg, restSec = ex.restSec
         ))
         startRest(ex.restSec)
-        val nextSet = if (st.currentSet >= ex.sets) {
-            _state.update { it.copy(currentExerciseIndex = it.currentExerciseIndex + 1, currentSet = 1) }
-            1
+        if (st.currentSet >= ex.sets) {
+            // Esercizio completato — aggiungilo ai completati
+            val newCompleted = st.completedExerciseIds + ex.id
+            val remaining = st.exercises.filter { it.id !in newCompleted }
+            if (remaining.isEmpty()) {
+                _state.update { it.copy(completedExerciseIds = newCompleted) }
+                finishSession()
+            } else {
+                // Auto-seleziona il prossimo esercizio rimanente
+                _state.update { it.copy(
+                    completedExerciseIds = newCompleted,
+                    currentExerciseId = remaining.first().id,
+                    currentSet = 1
+                )}
+            }
         } else {
-            st.currentSet + 1
-        }
-        if (_state.value.currentExerciseIndex >= st.exercises.size) {
-            finishSession()
-        } else {
-            _state.update { it.copy(currentSet = nextSet) }
+            _state.update { it.copy(currentSet = st.currentSet + 1) }
         }
     }
 
