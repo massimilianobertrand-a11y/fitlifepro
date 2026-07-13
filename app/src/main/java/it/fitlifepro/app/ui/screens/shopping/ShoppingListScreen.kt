@@ -19,6 +19,7 @@ import it.fitlifepro.app.ui.theme.*
 import it.fitlifepro.app.viewmodel.ShoppingItem
 import it.fitlifepro.app.viewmodel.ShoppingListViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShoppingListScreen(vm: ShoppingListViewModel = hiltViewModel()) {
     val state by vm.state.collectAsState()

@@ -18,6 +18,7 @@ import it.fitlifepro.app.ui.theme.*
 import it.fitlifepro.app.viewmodel.NotifConfig
 import it.fitlifepro.app.viewmodel.NotificationsViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(vm: NotificationsViewModel = hiltViewModel()) {
     val state by vm.state.collectAsState()

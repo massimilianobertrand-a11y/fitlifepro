@@ -36,6 +36,7 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
     var weightInput by remember { mutableStateOf("") }
     var repsInput by remember { mutableStateOf("") }
     var mediaSheetExercise by remember { mutableStateOf<Exercise?>(null) }
+    var showExercisePicker by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     LaunchedEffect(programId) { vm.loadProgram(programId) }
@@ -158,7 +159,6 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
             // ── ACTIVE / REST ───────────────────────────────────────────
             if (state.phase == WorkoutPhase.ACTIVE || state.phase == WorkoutPhase.REST) {
                 val ex = state.currentExercise
-                var showExercisePicker by remember { mutableStateOf(false) }
                 item {
                     SectionCard {
                         Row(
