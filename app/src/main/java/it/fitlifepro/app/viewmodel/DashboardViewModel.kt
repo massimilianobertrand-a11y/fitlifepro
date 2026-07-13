@@ -50,9 +50,8 @@ class DashboardViewModel @Inject constructor(
                 repo.getMealsByDay(program.id, todayDayName),
                 repo.getSupplements(program.id),
                 repo.getHydrationTotal(today),
-                repo.getHydrationConfig(program.id),
-                repo.getRecentSessions(30)
-            ) { days, meals, supps, water, hydCfg, sessions ->
+                repo.getHydrationConfig(program.id)
+            ) { days, meals, supps, water, hydCfg ->
                 val todayDay = days.find { it.dayOfWeek.equals(todayDayName, true) }
                 DashboardUiState(
                     program = program,
@@ -62,9 +61,11 @@ class DashboardViewModel @Inject constructor(
                     waterTodayMl = water,
                     waterGoalMl = (hydCfg?.dailyGoalMl ?: 3000) +
                         if (todayDay != null) hydCfg?.extraTrainingMl ?: 0 else 0,
-                    completedSessions = sessions.count { it.completed },
+                    completedSessions = 0,
                     isLoading = false
                 )
+            }.combine(repo.getRecentSessions(30)) { s, sessions ->
+                s.copy(completedSessions = sessions.count { it.completed })
             }.collect { s -> _state.value = s }
         }
     }

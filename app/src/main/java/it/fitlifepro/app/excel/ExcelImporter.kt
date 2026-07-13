@@ -75,7 +75,8 @@ class ExcelImporter @Inject constructor() {
         val days = mutableListOf<TrainingDay>()
         for (i in 3 until sheet.lastRowNum + 1) {
             val row = sheet.getRow(i) ?: continue
-            val day = row.str(0).ifEmpty { continue }
+            val day = row.str(0)
+            if (day.isEmpty()) continue
             days.add(TrainingDay(
                 programId    = 0L, // set after program insert
                 dayOfWeek    = day,
@@ -94,7 +95,8 @@ class ExcelImporter @Inject constructor() {
         val exs = mutableListOf<Exercise>()
         for (i in 3 until sheet.lastRowNum + 1) {
             val row = sheet.getRow(i) ?: continue
-            val day = row.str(0).ifEmpty { continue }
+            val day = row.str(0)
+            if (day.isEmpty()) continue
             exs.add(Exercise(
                 trainingDayId = 0L, // set after day insert
                 order         = row.intVal(1),
@@ -116,7 +118,8 @@ class ExcelImporter @Inject constructor() {
         val meals = mutableListOf<MealPlan>()
         for (i in 3 until sheet.lastRowNum + 1) {
             val row = sheet.getRow(i) ?: continue
-            val day = row.str(0).ifEmpty { continue }
+            val day = row.str(0)
+            if (day.isEmpty()) continue
             meals.add(MealPlan(
                 programId    = 0L,
                 dayOfWeek    = day,
@@ -138,7 +141,8 @@ class ExcelImporter @Inject constructor() {
         val sups = mutableListOf<Supplement>()
         for (i in 3 until sheet.lastRowNum + 1) {
             val row = sheet.getRow(i) ?: continue
-            val name = row.str(0).ifEmpty { continue }
+            val name = row.str(0)
+            if (name.isEmpty()) continue
             sups.add(Supplement(
                 programId = 0L,
                 name      = name,
@@ -160,7 +164,8 @@ class ExcelImporter @Inject constructor() {
         val cfg = mutableMapOf<String,String>()
         for (i in 4 until 14) {
             val row = sheet.getRow(i) ?: continue
-            val k = row.str(0).ifEmpty { continue }
+            val k = row.str(0)
+            if (k.isEmpty()) continue
             cfg[k] = row.str(1)
         }
         val config = HydrationConfig(
@@ -177,7 +182,8 @@ class ExcelImporter @Inject constructor() {
         val reminders = mutableListOf<HydrationReminder>()
         for (i in 16 until sheet.lastRowNum + 1) {
             val row = sheet.getRow(i) ?: continue
-            val label = row.str(0).ifEmpty { continue }
+            val label = row.str(0)
+            if (label.isEmpty()) continue
             reminders.add(HydrationReminder(
                 configId  = 0L,
                 label     = label,

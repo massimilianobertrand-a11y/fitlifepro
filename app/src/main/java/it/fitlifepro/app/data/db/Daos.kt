@@ -30,9 +30,9 @@ import kotlinx.coroutines.flow.Flow
 }
 
 @Dao interface ExerciseDao {
-    @Query("SELECT * FROM exercises WHERE trainingDayId=:dayId ORDER BY \`order\`")
+    @Query("SELECT * FROM exercises WHERE trainingDayId=:dayId ORDER BY `order`")
     fun getByDay(dayId: Long): Flow<List<Exercise>>
-    @Query("SELECT * FROM exercises WHERE trainingDayId=:dayId ORDER BY \`order\`")
+    @Query("SELECT * FROM exercises WHERE trainingDayId=:dayId ORDER BY `order`")
     suspend fun getByDaySync(dayId: Long): List<Exercise>
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insert(e: Exercise): Long
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAll(exs: List<Exercise>)
