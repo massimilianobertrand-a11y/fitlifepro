@@ -33,4 +33,5 @@ object AppModule {
     @Provides fun provideHydrationConfigDao(db: AppDatabase) = db.hydrationConfigDao()
     @Provides fun provideHydrationReminderDao(db: AppDatabase) = db.hydrationReminderDao()
     @Provides fun provideHydrationLogDao(db: AppDatabase) = db.hydrationLogDao()
+    @Provides fun provideHealthDataDao(db: AppDatabase) = db.healthDataDao()
 }
