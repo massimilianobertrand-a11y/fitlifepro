@@ -43,8 +43,7 @@ fun HistoryScreen(vm: HistoryViewModel = hiltViewModel()) {
     }) { padding ->
         if (sessions.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState("Nessuna sessione registrata
-Avvia il tuo primo allenamento!",
+                EmptyState("Nessuna sessione registrata\nAvvia il tuo primo allenamento!",
                     Icons.Default.FitnessCenter)
             }
         } else {

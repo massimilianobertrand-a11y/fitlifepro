@@ -39,8 +39,7 @@ class ImportViewModel @Inject constructor(
         _state.value = if (result.errors.isEmpty() || result.program.name != "?")
             ImportUiState.Preview(result)
         else
-            ImportUiState.Error(result.errors.joinToString("
-"))
+            ImportUiState.Error(result.errors.joinToString("\n"))
     }
 
     fun confirmImport(result: ImportResult) = viewModelScope.launch {
