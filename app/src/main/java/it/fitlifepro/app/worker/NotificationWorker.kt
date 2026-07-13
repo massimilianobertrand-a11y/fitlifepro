@@ -1,4 +1,3 @@
-
 package it.fitlifepro.app.worker
 
 import android.app.NotificationManager
@@ -57,6 +56,46 @@ class NotificationWorker @AssistedInject constructor(
         const val KEY_CHANNEL = "channel"
         const val KEY_ID      = "notif_id"
 
+        /**
+         * Schedules a DAILY repeating notification.
+         * The first trigger is at the specified hour:minute of the NEXT occurrence.
+         * Repeats every 24 hours automatically — no renewal needed.
+         */
+        fun scheduleDaily(
+            context: Context,
+            tag: String,
+            hour: Int,
+            minute: Int,
+            title: String,
+            message: String,
+            channel: String
+        ) {
+            val nowMs = System.currentTimeMillis()
+            val cal = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, hour)
+                set(java.util.Calendar.MINUTE, minute)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }
+            if (cal.timeInMillis <= nowMs) cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+            val initialDelayMs = cal.timeInMillis - nowMs
+
+            val data = workDataOf(
+                KEY_TITLE to title,
+                KEY_MESSAGE to message,
+                KEY_CHANNEL to channel,
+                KEY_ID to tag.hashCode()
+            )
+            val req = PeriodicWorkRequestBuilder<NotificationWorker>(24, TimeUnit.HOURS)
+                .setInputData(data)
+                .setInitialDelay(initialDelayMs, TimeUnit.MILLISECONDS)
+                .addTag(tag)
+                .build()
+            WorkManager.getInstance(context)
+                .enqueueUniquePeriodicWork(tag, ExistingPeriodicWorkPolicy.REPLACE, req)
+        }
+
+        /** Legacy one-shot (kept for BootReceiver reschedule compatibility) */
         fun scheduleOnce(
             context: Context,
             tag: String,
@@ -80,6 +119,6 @@ class NotificationWorker @AssistedInject constructor(
         }
 
         fun cancelByTag(context: Context, tag: String) =
-            WorkManager.getInstance(context).cancelAllWorkByTag(tag)
+            WorkManager.getInstance(context).cancelUniqueWork(tag)
     }
 }

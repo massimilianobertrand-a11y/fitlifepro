@@ -3,7 +3,6 @@ package it.fitlifepro.app.ui.screens.shopping
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -30,17 +29,15 @@ fun ShoppingListScreen(vm: ShoppingListViewModel = hiltViewModel()) {
                 title = {
                     Column {
                         Text("🛒 Lista della Spesa", style = MaterialTheme.typography.titleLarge)
-                        val done = state.items.count { it.checked }
-                        val total = state.filtered.size
                         Text(
-                            "${done}/${total} articoli",
+                            "${state.checkedCount}/${state.totalCount} articoli",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.outline
                         )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { vm.uncheckAll() }) {
+                    IconButton(onClick = { vm.resetAll() }) {
                         Icon(Icons.Default.RestartAlt, "Deseleziona tutto",
                             tint = MaterialTheme.colorScheme.outline)
                     }
@@ -71,34 +68,14 @@ fun ShoppingListScreen(vm: ShoppingListViewModel = hiltViewModel()) {
         }
 
         Column(Modifier.padding(padding)) {
-            // Filtro per giorno
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(state.days) { day ->
-                    FilterChip(
-                        selected = state.filterDay == day,
-                        onClick = { vm.setFilterDay(day) },
-                        label = { Text(day, style = MaterialTheme.typography.labelMedium) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Orange500,
-                            selectedLabelColor = androidx.compose.ui.graphics.Color.White
-                        )
-                    )
-                }
-            }
-
-            // Progresso
-            val doneCount = state.filtered.count { it.checked }
-            val totalCount = state.filtered.size
-            if (totalCount > 0) {
+            // Barra di progresso
+            if (state.totalCount > 0) {
                 LinearProgressIndicator(
-                    progress = { doneCount.toFloat() / totalCount },
+                    progress = { state.checkedCount.toFloat() / state.totalCount },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .height(6.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .height(8.dp),
                     color = Green500,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -106,45 +83,17 @@ fun ShoppingListScreen(vm: ShoppingListViewModel = hiltViewModel()) {
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-            // Lista raggruppata per pasto
+            // Lista normalizzata per alimento con quantità totale
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                state.groupedFiltered.forEach { (mealType, items) ->
-                    item(key = "header_$mealType") {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                mealTypeEmoji(mealType),
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                mealType,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Orange500
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            val doneMeal = items.count { it.checked }
-                            Text(
-                                "$doneMeal/${items.size}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                    }
-                    items(items, key = { "${it.name}_${it.mealType}_${it.dayOfWeek}" }) { item ->
-                        ShoppingItemRow(
-                            item = item,
-                            showDay = state.filterDay == "Tutti",
-                            onToggle = { vm.toggleItem(item) }
-                        )
-                    }
+                items(state.items, key = { it.name }) { item ->
+                    ShoppingItemRow(
+                        item = item,
+                        onToggle = { vm.toggleItem(item) }
+                    )
                 }
             }
         }
@@ -152,7 +101,7 @@ fun ShoppingListScreen(vm: ShoppingListViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun ShoppingItemRow(item: ShoppingItem, showDay: Boolean = true, onToggle: () -> Unit) {
+private fun ShoppingItemRow(item: ShoppingItem, onToggle: () -> Unit) {
     val bgColor by animateColorAsState(
         if (item.checked)
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -177,26 +126,31 @@ private fun ShoppingItemRow(item: ShoppingItem, showDay: Boolean = true, onToggl
                 colors = CheckboxDefaults.colors(checkedColor = Green500)
             )
             Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f)) {
+            Text(
+                item.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (item.checked) FontWeight.Normal else FontWeight.Medium,
+                textDecoration = if (item.checked) TextDecoration.LineThrough else null,
+                color = if (item.checked)
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                else
+                    MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            // Quantità totale settimanale
+            if (item.totalGrams > 0) {
                 Text(
-                    item.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (item.checked) FontWeight.Normal else FontWeight.Medium,
-                    textDecoration = if (item.checked) TextDecoration.LineThrough else null,
+                    "${item.totalGrams}g",
+                    style = MaterialTheme.typography.labelMedium,
                     color = if (item.checked)
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        Orange500.copy(alpha = 0.4f)
                     else
-                        MaterialTheme.colorScheme.onSurface
+                        Orange500,
+                    fontWeight = FontWeight.Bold
                 )
-                if (showDay) {
-                    Text(
-                        item.dayOfWeek,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
             }
             if (item.checked) {
+                Spacer(Modifier.width(8.dp))
                 Icon(
                     Icons.Default.CheckCircle, null,
                     tint = Green500,
@@ -205,13 +159,4 @@ private fun ShoppingItemRow(item: ShoppingItem, showDay: Boolean = true, onToggl
             }
         }
     }
-}
-
-private fun mealTypeEmoji(mealType: String): String = when {
-    mealType.contains("Colazione", ignoreCase = true) -> "🥣"
-    mealType.contains("Spuntino", ignoreCase = true) -> "🍌"
-    mealType.contains("Pranzo", ignoreCase = true) -> "🍽️"
-    mealType.contains("Cena", ignoreCase = true) -> "🍴"
-    mealType.contains("Post", ignoreCase = true) -> "💪"
-    else -> "🥗"
 }

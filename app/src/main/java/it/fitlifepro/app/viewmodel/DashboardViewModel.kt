@@ -40,10 +40,10 @@ class DashboardViewModel @Inject constructor(
     init { load() }
 
     fun load() = viewModelScope.launch {
-        repo.activeProgram.collect { program ->
+        repo.activeProgram.flatMapLatest { program ->
             if (program == null) {
                 _state.update { it.copy(isLoading = false) }
-                return@collect
+                return@flatMapLatest kotlinx.coroutines.flow.emptyFlow()
             }
             combine(
                 repo.getTrainingDays(program.id),
@@ -66,8 +66,8 @@ class DashboardViewModel @Inject constructor(
                 )
             }.combine(repo.getRecentSessions(30)) { s, sessions ->
                 s.copy(completedSessions = sessions.count { it.completed })
-            }.collect { s -> _state.value = s }
-        }
+            }
+        }.collect { s -> _state.value = s }
     }
 
     private fun filterSuppForToday(s: Supplement, isTrainingDay: Boolean): Boolean = when (s.days) {

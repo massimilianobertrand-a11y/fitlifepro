@@ -2,13 +2,9 @@
 package it.fitlifepro.app.ui.screens.workout
 
 import android.content.Context
-import android.media.ToneGenerator
-import android.media.AudioManager
 import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import androidx.compose.foundation.layout.*
+import it.fitlifepro.app.service.RestTimerService
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -41,38 +37,19 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
     val context = LocalContext.current
     LaunchedEffect(programId) { vm.loadProgram(programId) }
 
-    // Audio + vibrazione al termine del recupero
-    LaunchedEffect(Unit) {
-        vm.events.collect { event ->
-            when (event) {
-                is WorkoutEvent.RestEnded -> {
-                    // Vibrazione: 3 impulsi brevi
-                    val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
-                    } else {
-                        @Suppress("DEPRECATION")
-                        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                    }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        vibrator.vibrate(VibrationEffect.createWaveform(
-                            longArrayOf(0, 200, 100, 200, 100, 400), -1))
-                    } else {
-                        @Suppress("DEPRECATION")
-                        vibrator.vibrate(longArrayOf(0, 200, 100, 200, 100, 400), -1)
-                    }
-                    // Beep audio: 3 toni brevi
-                    try {
-                        val tg = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
-                        tg.startTone(ToneGenerator.TONE_PROP_BEEP, 200)
-                        kotlinx.coroutines.delay(350)
-                        tg.startTone(ToneGenerator.TONE_PROP_BEEP, 200)
-                        kotlinx.coroutines.delay(350)
-                        tg.startTone(ToneGenerator.TONE_PROP_BEEP2, 400)
-                        kotlinx.coroutines.delay(500)
-                        tg.release()
-                    } catch (_: Exception) { }
+    // Avvia/ferma il RestTimerService in base alla fase
+    // Il service tiene sveglio il telefono e suona finché l'utente non preme Stop
+    LaunchedEffect(state.phase) {
+        when (state.phase) {
+            WorkoutPhase.REST -> {
+                val intent = RestTimerService.startIntent(context, state.restSecondsLeft)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
                 }
             }
+            else -> context.startService(RestTimerService.stopIntent(context))
         }
     }
 

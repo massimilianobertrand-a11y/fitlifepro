@@ -10,22 +10,16 @@ import javax.inject.Inject
 
 data class ShoppingItem(
     val name: String,
-    val mealType: String,
-    val dayOfWeek: String,
+    val totalGrams: Int,
     var checked: Boolean = false
 )
 
 data class ShoppingListUiState(
     val items: List<ShoppingItem> = emptyList(),
-    val isLoading: Boolean = true,
-    val filterDay: String = "Tutti"
+    val isLoading: Boolean = true
 ) {
-    val days: List<String> get() = listOf("Tutti") +
-        items.map { it.dayOfWeek }.distinct().sorted()
-    val filtered: List<ShoppingItem> get() = if (filterDay == "Tutti") items
-        else items.filter { it.dayOfWeek == filterDay }
-    val groupedFiltered: Map<String, List<ShoppingItem>> get() =
-        filtered.groupBy { it.mealType }
+    val checkedCount: Int get() = items.count { it.checked }
+    val totalCount: Int get() = items.size
 }
 
 @HiltViewModel
@@ -39,40 +33,50 @@ class ShoppingListViewModel @Inject constructor(
     init { loadShoppingList() }
 
     private fun loadShoppingList() = viewModelScope.launch {
-        repo.activeProgram.collect { program ->
+        repo.activeProgram.flatMapLatest { program ->
             if (program == null) {
                 _state.update { it.copy(isLoading = false, items = emptyList()) }
-                return@collect
+                return@flatMapLatest kotlinx.coroutines.flow.emptyFlow()
             }
-            repo.getMealPlan(program.id).collect { plans ->
-                val items = mutableListOf<ShoppingItem>()
-                plans.forEach { plan ->
-                    if (plan.food1.isNotBlank())
-                        items += ShoppingItem(plan.food1.trim(), plan.mealType, plan.dayOfWeek)
-                    if (plan.food2.isNotBlank())
-                        items += ShoppingItem(plan.food2.trim(), plan.mealType, plan.dayOfWeek)
+            repo.getMealPlan(program.id)
+        }.collect { plans ->
+            // Aggregate quantities per food name (case-insensitive)
+            val quantityMap = mutableMapOf<String, Int>() // normalized name -> total grams
+            plans.forEach { plan ->
+                if (plan.food1.isNotBlank()) {
+                    val key = plan.food1.trim().lowercase()
+                    val display = plan.food1.trim()
+                    // store display name keyed by lowercase
+                    quantityMap[display] = (quantityMap[display] ?: 0) + plan.qty1g
                 }
-                // Deduplica per nome+mealType, preserva ordine
-                val seen = mutableSetOf<String>()
-                val deduped = items.filter { seen.add("${it.name}_${it.mealType}") }
-                _state.update { it.copy(isLoading = false, items = deduped) }
+                if (plan.food2.isNotBlank()) {
+                    val display = plan.food2.trim()
+                    quantityMap[display] = (quantityMap[display] ?: 0) + plan.qty2g
+                }
             }
+            // Merge case-insensitive duplicates (prefer the capitalized form)
+            val merged = mutableMapOf<String, Int>()
+            quantityMap.forEach { (name, qty) ->
+                val canonical = merged.keys.firstOrNull { it.equals(name, ignoreCase = true) } ?: name
+                merged[canonical] = (merged[canonical] ?: 0) + qty
+            }
+            val items = merged
+                .filter { it.key.isNotBlank() }
+                .map { (name, qty) -> ShoppingItem(name, qty) }
+                .sortedBy { it.name.lowercase() }
+            _state.update { it.copy(isLoading = false, items = items) }
         }
     }
 
     fun toggleItem(item: ShoppingItem) {
         _state.update { st ->
             st.copy(items = st.items.map {
-                if (it.name == item.name && it.mealType == item.mealType &&
-                    it.dayOfWeek == item.dayOfWeek) it.copy(checked = !it.checked)
-                else it
+                if (it.name == item.name) it.copy(checked = !it.checked) else it
             })
         }
     }
 
-    fun setFilterDay(day: String) = _state.update { it.copy(filterDay = day) }
-
-    fun uncheckAll() = _state.update { st ->
-        st.copy(items = st.items.map { it.copy(checked = false) })
+    fun resetAll() {
+        _state.update { st -> st.copy(items = st.items.map { it.copy(checked = false) }) }
     }
 }
