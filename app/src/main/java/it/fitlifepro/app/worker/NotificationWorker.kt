@@ -10,7 +10,10 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import it.fitlifepro.app.FitLifeApplication.Companion.*
+import it.fitlifepro.app.FitLifeApplication.Companion.CH_HYDRATION
+import it.fitlifepro.app.FitLifeApplication.Companion.CH_WORKOUT
+import it.fitlifepro.app.FitLifeApplication.Companion.CH_NUTRITION
+import it.fitlifepro.app.FitLifeApplication.Companion.CH_SUPPS
 import it.fitlifepro.app.MainActivity
 import java.util.concurrent.TimeUnit
 
