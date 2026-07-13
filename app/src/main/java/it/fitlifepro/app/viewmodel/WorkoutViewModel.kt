@@ -105,6 +105,15 @@ class WorkoutViewModel @Inject constructor(
         }
     }
 
+    fun updateExerciseMedia(exercise: Exercise, url: String) = viewModelScope.launch {
+        val updated = exercise.copy(videoUrl = url)
+        repo.updateExercise(updated)
+        // Refresh the exercises list in state
+        _state.update { st ->
+            st.copy(exercises = st.exercises.map { if (it.id == exercise.id) updated else it })
+        }
+    }
+
     private fun startElapsedTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {

@@ -10,8 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import it.fitlifepro.app.data.model.Exercise
 import it.fitlifepro.app.ui.components.*
 import it.fitlifepro.app.ui.theme.*
 import it.fitlifepro.app.viewmodel.WorkoutPhase
@@ -23,21 +25,37 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
     val state by vm.state.collectAsState()
     var weightInput by remember { mutableStateOf("") }
     var repsInput by remember { mutableStateOf("") }
+    var mediaSheetExercise by remember { mutableStateOf<Exercise?>(null) }
 
     LaunchedEffect(programId) { vm.loadProgram(programId) }
+
+    // Media bottom sheet
+    mediaSheetExercise?.let { ex ->
+        ExerciseMediaSheet(
+            exercise = ex,
+            onDismiss = { mediaSheetExercise = null },
+            onSave = { exercise, url ->
+                vm.updateExerciseMedia(exercise, url)
+                mediaSheetExercise = null
+            }
+        )
+    }
 
     Scaffold(topBar = {
         TopAppBar(
             title = { Text("Allenamento") },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Orange500,
-                titleContentColor = androidx.compose.ui.graphics.Color.White)
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Orange500,
+                titleContentColor = Color.White
+            )
         )
     }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding),
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Day selector
+            // ── IDLE: Day selector + exercise list ──────────────────────
             if (state.phase == WorkoutPhase.IDLE) {
                 item {
                     SectionCard {
@@ -52,30 +70,29 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
                                 Spacer(Modifier.width(8.dp))
                                 Text("${day.dayOfWeek} — ${day.sessionType}")
                                 Spacer(Modifier.weight(1f))
-                                Text("${day.timeHHMM}", color = MaterialTheme.colorScheme.outline)
+                                Text(day.timeHHMM, color = MaterialTheme.colorScheme.outline)
                             }
                         }
                     }
                 }
+
                 state.selectedDay?.let { day ->
                     item {
                         SectionCard {
-                            SectionHeader("Esercizi — ${day.dayOfWeek}", Orange500, Icons.Default.List)
+                            SectionHeader(
+                                "Esercizi — ${day.dayOfWeek}",
+                                Orange500,
+                                Icons.AutoMirrored.Filled.List
+                            )
                             Spacer(Modifier.height(12.dp))
                             state.exercises.forEach { ex ->
-                                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically) {
-                                    Text("${ex.order}.", color = Orange500,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        modifier = Modifier.width(24.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(ex.name, style = MaterialTheme.typography.bodyLarge)
-                                        Text("${ex.sets}×${ex.reps} · ${ex.weightKg}kg · ${ex.restSec}s riposo",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.outline)
-                                    }
-                                }
-                                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                ExerciseRow(
+                                    exercise = ex,
+                                    onMediaClick = { mediaSheetExercise = ex }
+                                )
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                                )
                             }
                             Spacer(Modifier.height(12.dp))
                             Button(
@@ -92,33 +109,86 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
                 }
             }
 
-            // Active workout
+            // ── ACTIVE / REST ───────────────────────────────────────────
             if (state.phase == WorkoutPhase.ACTIVE || state.phase == WorkoutPhase.REST) {
                 val ex = state.exercises.getOrNull(state.currentExerciseIndex)
                 item {
                     SectionCard {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("⏱ ${state.elapsedSeconds / 60}m ${state.elapsedSeconds % 60}s",
-                                color = Orange500, style = MaterialTheme.typography.labelLarge)
-                            Text("Es. ${state.currentExerciseIndex + 1}/${state.exercises.size}",
-                                color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.labelLarge)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                "⏱ ${state.elapsedSeconds / 60}m ${state.elapsedSeconds % 60}s",
+                                color = Orange500,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                            Text(
+                                "Es. ${state.currentExerciseIndex + 1}/${state.exercises.size}",
+                                color = MaterialTheme.colorScheme.outline,
+                                style = MaterialTheme.typography.labelLarge
+                            )
                         }
                         Spacer(Modifier.height(8.dp))
                         ex?.let {
-                            Text(it.name, style = MaterialTheme.typography.headlineMedium, color = Orange500)
-                            Text("${it.muscleGroup} · Serie ${state.currentSet}/${it.sets}",
-                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            // Exercise name row with media button
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        it.name,
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = Orange500
+                                    )
+                                    Text(
+                                        "${it.muscleGroup} · Serie ${state.currentSet}/${it.sets}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                                // Media icon button — orange if media exists, grey otherwise
+                                IconButton(onClick = { mediaSheetExercise = ex }) {
+                                    Icon(
+                                        imageVector = if (it.videoUrl.isNotBlank())
+                                            Icons.Default.SmartDisplay
+                                        else
+                                            Icons.Default.VideoLibrary,
+                                        contentDescription = "Media esercizio",
+                                        tint = if (it.videoUrl.isNotBlank()) Orange500
+                                               else MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
                             Spacer(Modifier.height(12.dp))
+
                             if (state.phase == WorkoutPhase.REST) {
-                                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("RECUPERO", style = MaterialTheme.typography.labelLarge, color = Blue500)
-                                    Text("${state.restSecondsLeft}s", style = MaterialTheme.typography.headlineLarge,
-                                        color = Blue500)
+                                Column(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        "RECUPERO",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = Blue500
+                                    )
+                                    Text(
+                                        "${state.restSecondsLeft}s",
+                                        style = MaterialTheme.typography.headlineLarge,
+                                        color = Blue500
+                                    )
                                     Spacer(Modifier.height(8.dp))
-                                    OutlinedButton(onClick = { vm.skipRest() }) { Text("Salta recupero") }
+                                    OutlinedButton(onClick = { vm.skipRest() }) {
+                                        Text("Salta recupero")
+                                    }
                                 }
                             } else {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     OutlinedTextField(
                                         value = weightInput,
                                         onValueChange = { weightInput = it },
@@ -161,21 +231,85 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
                 }
             }
 
-            // Done
+            // ── DONE ────────────────────────────────────────────────────
             if (state.phase == WorkoutPhase.DONE) {
                 item {
                     SectionCard {
-                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.EmojiEvents, null, tint = Amber500, modifier = Modifier.size(64.dp))
+                        Column(
+                            Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.EmojiEvents, null,
+                                tint = Amber500,
+                                modifier = Modifier.size(64.dp)
+                            )
                             Spacer(Modifier.height(12.dp))
-                            Text("Sessione completata! 💪", style = MaterialTheme.typography.headlineMedium)
-                            Text("Durata: ${state.elapsedSeconds / 60} minuti",
-                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            Text(
+                                "Sessione completata! 💪",
+                                style = MaterialTheme.typography.headlineMedium
+                            )
+                            Text(
+                                "Durata: ${state.elapsedSeconds / 60} minuti",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.outline
+                            )
                         }
                     }
                 }
             }
+
             item { Spacer(Modifier.height(80.dp)) }
+        }
+    }
+}
+
+/** Riga singolo esercizio con indicatore media e pulsante 🎬 */
+@Composable
+private fun ExerciseRow(
+    exercise: Exercise,
+    onMediaClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Order number
+        Text(
+            "${exercise.order}.",
+            color = Orange500,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.width(28.dp)
+        )
+        // Name + detail
+        Column(Modifier.weight(1f)) {
+            Text(exercise.name, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "${exercise.sets}×${exercise.reps} · ${exercise.weightKg}kg · ${exercise.restSec}s riposo",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+        // Media button — filled orange if URL exists, outline grey if not
+        IconButton(
+            onClick = onMediaClick,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                imageVector = if (exercise.videoUrl.isNotBlank())
+                    Icons.Default.SmartDisplay
+                else
+                    Icons.Default.VideoLibrary,
+                contentDescription = if (exercise.videoUrl.isNotBlank())
+                    "Video assegnato — tocca per modificare"
+                else
+                    "Assegna video o immagine",
+                tint = if (exercise.videoUrl.isNotBlank()) Orange500
+                       else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }

@@ -66,5 +66,6 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.splashscreen)
     implementation(libs.coroutines.android)
+    implementation(libs.coil.compose)
     debugImplementation(libs.compose.ui.tooling)
 }
