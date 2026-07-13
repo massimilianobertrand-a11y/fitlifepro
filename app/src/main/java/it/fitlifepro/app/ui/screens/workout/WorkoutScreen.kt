@@ -163,7 +163,17 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(8.dp))
+
+                            // Media preview inline — sempre visibile se assegnato
+                            ExerciseMediaPreview(
+                                videoUrl = it.videoUrl,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            if (it.videoUrl.isNotBlank()) {
+                                Spacer(Modifier.height(8.dp))
+                            }
 
                             if (state.phase == WorkoutPhase.REST) {
                                 Column(

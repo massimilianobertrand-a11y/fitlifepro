@@ -5,6 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -46,6 +48,122 @@ fun isImageUrl(url: String): Boolean {
     return lower.endsWith(".jpg") || lower.endsWith(".jpeg") ||
            lower.endsWith(".png") || lower.endsWith(".gif") ||
            lower.endsWith(".webp")
+}
+
+/**
+ * Anteprima compatta del media assegnato all'esercizio.
+ * Mostrata inline nella scheda esercizio durante l'allenamento attivo.
+ * Non visibile se videoUrl è vuoto.
+ */
+@Composable
+fun ExerciseMediaPreview(
+    videoUrl: String,
+    modifier: Modifier = Modifier
+) {
+    if (videoUrl.isBlank()) return
+
+    val context = LocalContext.current
+    val ytId = remember(videoUrl) { extractYouTubeId(videoUrl) }
+    val isImage = remember(videoUrl) { isImageUrl(videoUrl) }
+
+    fun openUrl() {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(videoUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+    }
+
+    when {
+        // ── YouTube thumbnail con overlay play ──────────────────────────
+        ytId != null -> {
+            val thumbUrl = "https://img.youtube.com/vi/$ytId/mqdefault.jpg"
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, Orange500.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .clickable { openUrl() }
+            ) {
+                AsyncImage(
+                    model = thumbUrl,
+                    contentDescription = "Video tutorial",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                // Dark overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.25f))
+                )
+                // Play button overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    FilledIconButton(
+                        onClick = ::openUrl,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Orange500.copy(alpha = 0.9f)
+                        ),
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Apri video",
+                            modifier = Modifier.size(32.dp),
+                            tint = Color.White
+                        )
+                    }
+                }
+                // Label bottom-left
+                Text(
+                    "▶ YouTube · tocca per aprire",
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(10.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White
+                )
+            }
+        }
+        // ── Immagine diretta ────────────────────────────────────────────
+        isImage -> {
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, Orange500.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            ) {
+                AsyncImage(
+                    model = videoUrl,
+                    contentDescription = "Immagine esercizio",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+        // ── Link generico ───────────────────────────────────────────────
+        else -> {
+            OutlinedButton(
+                onClick = ::openUrl,
+                modifier = modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange500)
+            ) {
+                Icon(Icons.Default.OpenInBrowser, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Apri riferimento esercizio", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
