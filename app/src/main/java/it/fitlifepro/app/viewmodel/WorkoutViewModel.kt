@@ -12,6 +12,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** Evento emesso quando il recupero termina — usato da WorkoutScreen per audio+vibrazione */
+sealed class WorkoutEvent {
+    object RestEnded : WorkoutEvent()
+}
+
 enum class WorkoutPhase { IDLE, ACTIVE, REST, DONE }
 
 data class WorkoutUiState(
@@ -39,6 +44,9 @@ class WorkoutViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(WorkoutUiState())
     val state: StateFlow<WorkoutUiState> = _state.asStateFlow()
+
+    private val _events = MutableSharedFlow<WorkoutEvent>(extraBufferCapacity = 4)
+    val events: SharedFlow<WorkoutEvent> = _events.asSharedFlow()
 
     private var restJob: Job? = null
     private var timerJob: Job? = null
@@ -131,6 +139,8 @@ class WorkoutViewModel @Inject constructor(
                 delay(1000)
             }
             _state.update { it.copy(phase = WorkoutPhase.ACTIVE, restSecondsLeft = 0) }
+            // Emetti evento fine recupero → WorkoutScreen triggererà audio+vibrazione
+            _events.emit(WorkoutEvent.RestEnded)
         }
     }
 

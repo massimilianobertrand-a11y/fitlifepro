@@ -16,7 +16,10 @@ import it.fitlifepro.app.viewmodel.DashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
+fun DashboardScreen(
+    vm: DashboardViewModel = hiltViewModel(),
+    onNavigate: (String) -> Unit = {}
+) {
     val state by vm.state.collectAsState()
 
     Scaffold(
@@ -121,6 +124,33 @@ fun DashboardScreen(vm: DashboardViewModel = hiltViewModel()) {
                     val pct = if (state.waterGoalMl > 0) (state.waterTodayMl * 100 / state.waterGoalMl) else 0
                     Text("$pct% dell’obiettivo giornaliero",
                         style = MaterialTheme.typography.bodyMedium, color = Blue500)
+                }
+            }
+            item {
+                Text(
+                    "Accesso rapido",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickAccessCard(
+                        emoji = "🛒",
+                        label = "Lista della Spesa",
+                        color = Green500,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate("shopping") }
+                    )
+                    QuickAccessCard(
+                        emoji = "🔔",
+                        label = "Notifiche",
+                        color = Indigo500,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate("notifications") }
+                    )
                 }
             }
             item { Spacer(Modifier.height(80.dp)) }

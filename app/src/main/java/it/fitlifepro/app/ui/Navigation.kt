@@ -13,20 +13,24 @@ import it.fitlifepro.app.ui.screens.dashboard.DashboardScreen
 import it.fitlifepro.app.ui.screens.history.HistoryScreen
 import it.fitlifepro.app.ui.screens.hydration.HydrationScreen
 import it.fitlifepro.app.ui.screens.`import`.ImportScreen
+import it.fitlifepro.app.ui.screens.notifications.NotificationsScreen
 import it.fitlifepro.app.ui.screens.nutrition.NutritionScreen
+import it.fitlifepro.app.ui.screens.shopping.ShoppingListScreen
 import it.fitlifepro.app.ui.screens.supplements.SupplementsScreen
 import it.fitlifepro.app.ui.screens.workout.WorkoutScreen
 import androidx.compose.ui.graphics.Color
 import it.fitlifepro.app.ui.theme.*
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector, val color: Color) {
-    object Dashboard   : Screen("dashboard",   "Home",        Icons.Default.Home,          Indigo500)
-    object Workout     : Screen("workout",     "Workout",     Icons.Default.FitnessCenter, Orange500)
-    object Nutrition   : Screen("nutrition",   "Nutrizione",  Icons.Default.Restaurant,    Green500)
-    object Supplements : Screen("supplements", "Integratori", Icons.Default.Medication,    Purple500)
-    object Hydration   : Screen("hydration",   "Acqua",       Icons.Default.Water,         Blue500)
-    object History     : Screen("history",     "Storico",     Icons.Default.BarChart,      Amber500)
-    object Import      : Screen("import",      "Importa",     Icons.Default.UploadFile,    Indigo500)
+    object Dashboard      : Screen("dashboard",      "Home",        Icons.Default.Home,          Indigo500)
+    object Workout        : Screen("workout",        "Workout",     Icons.Default.FitnessCenter, Orange500)
+    object Nutrition      : Screen("nutrition",      "Nutrizione",  Icons.Default.Restaurant,    Green500)
+    object Supplements    : Screen("supplements",    "Integratori", Icons.Default.Medication,    Purple500)
+    object Hydration      : Screen("hydration",      "Acqua",       Icons.Default.Water,         Blue500)
+    object History        : Screen("history",        "Storico",     Icons.Default.BarChart,      Amber500)
+    object Import         : Screen("import",         "Importa",     Icons.Default.UploadFile,    Indigo500)
+    object ShoppingList   : Screen("shopping",       "Spesa",       Icons.Default.ShoppingCart,  Green500)
+    object Notifications  : Screen("notifications",  "Notifiche",   Icons.Default.Notifications, Indigo500)
 }
 
 val bottomNavItems = listOf(
@@ -40,12 +44,14 @@ fun FitLifeNavHost(
     programId: Long
 ) {
     NavHost(navController, startDestination = Screen.Dashboard.route) {
-        composable(Screen.Dashboard.route)   { DashboardScreen() }
-        composable(Screen.Workout.route)     { WorkoutScreen(programId) }
-        composable(Screen.Nutrition.route)   { NutritionScreen(programId) }
-        composable(Screen.Supplements.route) { SupplementsScreen(programId) }
-        composable(Screen.Hydration.route)   { HydrationScreen(programId) }
-        composable(Screen.History.route)     { HistoryScreen() }
+        composable(Screen.Dashboard.route)      { DashboardScreen(onNavigate = { navController.navigate(it) }) }
+        composable(Screen.Workout.route)        { WorkoutScreen(programId) }
+        composable(Screen.Nutrition.route)      { NutritionScreen(programId) }
+        composable(Screen.Supplements.route)    { SupplementsScreen(programId) }
+        composable(Screen.Hydration.route)      { HydrationScreen(programId) }
+        composable(Screen.History.route)        { HistoryScreen() }
+        composable(Screen.ShoppingList.route)   { ShoppingListScreen() }
+        composable(Screen.Notifications.route)  { NotificationsScreen() }
         composable(Screen.Import.route) {
             ImportScreen(onImportSuccess = {
                 navController.navigate(Screen.Dashboard.route) {

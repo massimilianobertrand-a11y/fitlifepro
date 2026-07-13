@@ -1,6 +1,13 @@
 
 package it.fitlifepro.app.ui.screens.workout
 
+import android.content.Context
+import android.media.ToneGenerator
+import android.media.AudioManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,11 +19,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import it.fitlifepro.app.data.model.Exercise
 import it.fitlifepro.app.ui.components.*
 import it.fitlifepro.app.ui.theme.*
+import it.fitlifepro.app.viewmodel.WorkoutEvent
 import it.fitlifepro.app.viewmodel.WorkoutPhase
 import it.fitlifepro.app.viewmodel.WorkoutViewModel
 
@@ -28,7 +37,43 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
     var repsInput by remember { mutableStateOf("") }
     var mediaSheetExercise by remember { mutableStateOf<Exercise?>(null) }
 
+    val context = LocalContext.current
     LaunchedEffect(programId) { vm.loadProgram(programId) }
+
+    // Audio + vibrazione al termine del recupero
+    LaunchedEffect(Unit) {
+        vm.events.collect { event ->
+            when (event) {
+                is WorkoutEvent.RestEnded -> {
+                    // Vibrazione: 3 impulsi brevi
+                    val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+                    } else {
+                        @Suppress("DEPRECATION")
+                        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        vibrator.vibrate(VibrationEffect.createWaveform(
+                            longArrayOf(0, 200, 100, 200, 100, 400), -1))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator.vibrate(longArrayOf(0, 200, 100, 200, 100, 400), -1)
+                    }
+                    // Beep audio: 3 toni brevi
+                    try {
+                        val tg = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
+                        tg.startTone(ToneGenerator.TONE_PROP_BEEP, 200)
+                        kotlinx.coroutines.delay(350)
+                        tg.startTone(ToneGenerator.TONE_PROP_BEEP, 200)
+                        kotlinx.coroutines.delay(350)
+                        tg.startTone(ToneGenerator.TONE_PROP_BEEP2, 400)
+                        kotlinx.coroutines.delay(500)
+                        tg.release()
+                    } catch (_: Exception) { }
+                }
+            }
+        }
+    }
 
     // Media bottom sheet
     mediaSheetExercise?.let { ex ->
