@@ -138,9 +138,10 @@ class WorkoutViewModel @Inject constructor(
                 _state.update { it.copy(restSecondsLeft = i) }
                 delay(1000)
             }
-            _state.update { it.copy(phase = WorkoutPhase.ACTIVE, restSecondsLeft = 0) }
-            // Emetti evento fine recupero → WorkoutScreen triggererà audio+vibrazione
-            _events.emit(WorkoutEvent.RestEnded)
+            // NON transitare a ACTIVE automaticamente:
+            // è il RestTimerService che gestisce l'allarme e attende che l'utente prema STOP.
+            // Quando l'utente preme STOP (notifica o UI), skipRest() viene chiamato esternamente.
+            _state.update { it.copy(restSecondsLeft = 0) }
         }
     }
 

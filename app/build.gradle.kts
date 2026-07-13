@@ -76,5 +76,6 @@ dependencies {
     implementation(libs.splashscreen)
     implementation(libs.coroutines.android)
     implementation(libs.coil.compose)
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
     debugImplementation(libs.compose.ui.tooling)
 }

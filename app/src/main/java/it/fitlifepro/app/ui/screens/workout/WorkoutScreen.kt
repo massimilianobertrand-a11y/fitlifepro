@@ -1,7 +1,10 @@
 
 package it.fitlifepro.app.ui.screens.workout
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import androidx.compose.foundation.layout.*
 import it.fitlifepro.app.service.RestTimerService
@@ -18,10 +21,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import it.fitlifepro.app.data.model.Exercise
 import it.fitlifepro.app.ui.components.*
 import it.fitlifepro.app.ui.theme.*
-import it.fitlifepro.app.viewmodel.WorkoutEvent
 import it.fitlifepro.app.viewmodel.WorkoutPhase
 import it.fitlifepro.app.viewmodel.WorkoutViewModel
 
@@ -36,6 +39,22 @@ fun WorkoutScreen(programId: Long, vm: WorkoutViewModel = hiltViewModel()) {
 
     val context = LocalContext.current
     LaunchedEffect(programId) { vm.loadProgram(programId) }
+
+    // Riceve il segnale REST_DONE dalla notifica STOP → transita a ACTIVE
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == RestTimerService.ACTION_REST_DONE) {
+                    vm.skipRest()
+                }
+            }
+        }
+        val filter = IntentFilter(RestTimerService.ACTION_REST_DONE)
+        LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter)
+        onDispose {
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver)
+        }
+    }
 
     // Avvia/ferma il RestTimerService in base alla fase
     // Il service tiene sveglio il telefono e suona finché l'utente non preme Stop

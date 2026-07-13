@@ -11,6 +11,7 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.*
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import it.fitlifepro.app.MainActivity
 
 /**
@@ -23,11 +24,13 @@ class RestTimerService : Service() {
 
     // ── Public API (Intent actions / extras) ──────────────────────────────
     companion object {
-        const val ACTION_START = "rest.START"
-        const val ACTION_STOP  = "rest.STOP"
-        const val EXTRA_SECONDS = "seconds"
-        const val CH_REST = "fitlife_rest_timer"
-        const val NOTIF_ID = 9001
+        const val ACTION_START         = "rest.START"
+        const val ACTION_STOP          = "rest.STOP"          // da app (silenzioso)
+        const val ACTION_STOP_NOTIFY   = "rest.STOP_NOTIFY"   // da notifica → invia broadcast
+        const val ACTION_REST_DONE     = "rest.REST_DONE"     // broadcast ricevuto da WorkoutScreen
+        const val EXTRA_SECONDS        = "seconds"
+        const val CH_REST              = "fitlife_rest_timer"
+        const val NOTIF_ID             = 9001
 
         fun startIntent(ctx: Context, seconds: Int) =
             Intent(ctx, RestTimerService::class.java).apply {
@@ -72,7 +75,15 @@ class RestTimerService : Service() {
                 scheduleCountdown()
             }
             ACTION_STOP -> {
+                // Fermato dall'app (es. pulsante "Salta" nell'UI) — silenzioso, nessun broadcast
                 stopAlarm()
+                stopSelf()
+            }
+            ACTION_STOP_NOTIFY -> {
+                // Fermato dall'utente dalla notifica → invia broadcast a WorkoutScreen
+                stopAlarm()
+                LocalBroadcastManager.getInstance(this)
+                    .sendBroadcast(Intent(ACTION_REST_DONE))
                 stopSelf()
             }
         }
@@ -147,9 +158,10 @@ class RestTimerService : Service() {
 
     // ── Notification ──────────────────────────────────────────────────────
     private fun buildNotification(secs: Int, ringing: Boolean): Notification {
+        // ACTION_STOP_NOTIFY: premuto dalla notifica → invia broadcast REST_DONE a WorkoutScreen
         val stopPi = PendingIntent.getService(
             this, 0,
-            Intent(this, RestTimerService::class.java).apply { action = ACTION_STOP },
+            Intent(this, RestTimerService::class.java).apply { action = ACTION_STOP_NOTIFY },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val openPi = PendingIntent.getActivity(
