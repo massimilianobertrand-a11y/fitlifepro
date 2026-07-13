@@ -10,6 +10,15 @@ android {
     namespace = "it.fitlifepro.app"
     compileSdk = 35
 
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     defaultConfig {
         applicationId = "it.fitlifepro.app"
         minSdk = 26
